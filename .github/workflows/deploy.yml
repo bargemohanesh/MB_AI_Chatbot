@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # You can change this to the branch you want to deploy from
+      - main
 
 jobs:
   deploy:
@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Cache Docker layers
         uses: actions/cache@v4
@@ -24,8 +24,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Build Docker image
-        run: |
-          docker build -t chatbot-app .
+        run: docker build -t chatbot-app .
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -38,14 +37,14 @@ jobs:
           docker tag chatbot-app ${{ secrets.DOCKER_USERNAME }}/chatbot-app:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/chatbot-app:latest
 
-      - name: SSH into EC2 and pull and run Docker container
+      - name: SSH into EC2 and deploy container
         uses: appleboy/ssh-action@v0.1.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull your-dockerhub-username/chatbot-app:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/chatbot-app:latest
             docker stop chatbot-container || true
             docker rm chatbot-container || true
-            docker run -d --name chatbot-container -p 8000:8000 chatbot-app:latest
+            docker run -d --name chatbot-container -p 8000:8000 ${{ secrets.DOCKER_USERNAME }}/chatbot-app:latest
