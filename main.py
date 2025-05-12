@@ -11,6 +11,8 @@ import pickle
 import logging
 import traceback
 import datetime
+import boto3
+import zipfile
 
 #---------------------------  Async and Server Runtime --------------------------------------------------------
 import nest_asyncio
@@ -175,24 +177,85 @@ topic_chain = ConversationalRetrievalChain.from_llm(
     combine_docs_chain_kwargs={"prompt": custom_prompt}
 )
 
-#------------------- Set my model path (update for your path) -----------------------------
-model_path = "sarcasm_model_v3"  # <-- replace with your actual local path
+# --- Constants ---
+BUCKET_NAME = "mohanesh-chatbot-models"
+MODEL_KEY = "sarcasm_model_v3.zip"
+LOCAL_ZIP_PATH = "sarcasm_model_v3.zip"
+LOCAL_MODEL_DIR = "sarcasm_model_v3"
 
-#------------------- Load the trained model and tokenizer --------------------------------------------------
-tokenizer = DistilBertTokenizerFast.from_pretrained(model_path)
-model = DistilBertForSequenceClassification.from_pretrained(model_path)
+# --- Function: Download from S3 and Extract ---
+def download_and_extract_model(bucket_name, s3_key, local_zip_path, extract_dir):
+    if not os.path.exists(extract_dir):
+        print(f"Downloading {s3_key} from S3 bucket {bucket_name}...")
+        s3 = boto3.client('s3')
+        s3.download_file(bucket_name, s3_key, local_zip_path)
 
-#---------------------- Set model to evaluation mode ---------------------------------------------------
+        print(f"Extracting model to {extract_dir}...")
+        with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+        print("Model extraction complete.")
+    else:
+        print("Model already exists locally.")
+
+# --- Run Download ---
+download_and_extract_model(BUCKET_NAME, MODEL_KEY, LOCAL_ZIP_PATH, LOCAL_MODEL_DIR)
+
+# --- Load Model ---
+print("Loading tokenizer and model...")
+tokenizer = DistilBertTokenizerFast.from_pretrained(LOCAL_MODEL_DIR)
+model = DistilBertForSequenceClassification.from_pretrained(LOCAL_MODEL_DIR)
 model.eval()
+print("Model loaded.")
 
-#-------------------- Define sarcasm detection function -------------------------------------------------
+# --- Prediction Function ---
 def detect_sarcasm(text):
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
     with torch.no_grad():
         outputs = model(**inputs)
     logits = outputs.logits
     prediction = torch.argmax(logits, dim=-1).item()
-    return prediction == 1  # True for sarcastic, False for not sarcastic
+    return prediction == 1  # True if sarcastic
+
+'''
+# S3 Bucket info
+BUCKET_NAME = "mohanesh-chatbot-models"
+MODEL_KEY = "sarcasm_model_v3.zip"
+LOCAL_MODEL_PATH = "sarcasm_model_v3.zip"
+LOCAL_MODEL_DIR = "sarcasm_model_v3"
+
+# Function to download model from S3
+def download_model_from_s3(bucket_name, model_key, local_path):
+    if not os.path.exists(local_path):
+        print("Downloading model from S3...")
+        s3 = boto3.client('s3')
+        s3.download_file(bucket_name, model_key, local_path)
+        
+        # Unzip if it's a zip file
+        if local_path.endswith('.zip'):
+            print("Extracting model files...")
+            with zipfile.ZipFile(local_path, 'r') as zip_ref:
+                zip_ref.extractall(os.path.dirname(local_path))
+            print("Extraction complete.")
+
+# Check if model exists locally, otherwise download
+if not os.path.exists(LOCAL_MODEL_DIR):
+    download_model_from_s3(BUCKET_NAME, MODEL_KEY, LOCAL_MODEL_PATH)
+
+# Load the trained model and tokenizer
+tokenizer = DistilBertTokenizerFast.from_pretrained(LOCAL_MODEL_DIR)
+model = DistilBertForSequenceClassification.from_pretrained(LOCAL_MODEL_DIR)
+
+# Set model to evaluation mode
+model.eval()
+
+# Define sarcasm detection function
+def detect_sarcasm(text):
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+    with torch.no_grad():
+        outputs = model(**inputs)
+    logits = outputs.logits
+    prediction = torch.argmax(logits, dim=-1).item()
+    return prediction == 1  # True for sarcastic, False for not sarcastic'''
 
 #-------------------- Define rude phrases detection function -------------------------------------------------
 def rude_sentiment_detected(text):
@@ -313,7 +376,7 @@ def get_calendar_service():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file("client_secret_853349819074-5afkt8v8ce9k17setl98t11klg18pi0s.apps.googleusercontent.com.json", SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_console()
         with open("token.json", "w") as token:
             token.write(creds.to_json())
     return build('calendar', 'v3', credentials=creds)
