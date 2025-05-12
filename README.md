@@ -4,7 +4,7 @@ This is an AI chatbot application using Google's `gemini-pro-1.5` model, deploye
 
 ---
 
-##    🚀 Features  
+## 🚀 Features  
 - NLP-powered chatbot using Google Gemini API  
 - Supports interactive conversations  
 - Secure API key management via `.env` file  
