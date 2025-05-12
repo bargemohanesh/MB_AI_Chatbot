@@ -1,4 +1,4 @@
-#   🌟 AI Chatbot - Powered by Gemini Pro 1.5  
+#🌟 AI Chatbot - Powered by Gemini Pro 1.5  
 
 This is an AI chatbot application using Google's `gemini-pro-1.5` model, deployed on AWS EC2.
 
