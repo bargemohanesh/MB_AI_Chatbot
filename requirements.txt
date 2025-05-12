@@ -8,12 +8,12 @@ google-auth
 google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
-smtplib  # (built-in, no need to install separately)
-email  # (built-in, no need to install separately)
 dateparser
 pydantic
-torch
 transformers
 langchain
 langchain-google-genai
-faiss-cpu  # (or faiss-gpu if needed)
+faiss-cpu  
+boto3 
+langchain-community 
+bs4
