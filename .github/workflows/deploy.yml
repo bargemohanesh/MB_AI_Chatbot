@@ -35,8 +35,8 @@ jobs:
 
       - name: Push Docker image to Docker Hub
         run: |
-          docker tag chatbot-app your-dockerhub-username/chatbot-app:latest
-          docker push your-dockerhub-username/chatbot-app:latest
+          docker tag chatbot-app ${{ secrets.DOCKER_USERNAME }}/chatbot-app:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/chatbot-app:latest
 
       - name: SSH into EC2 and pull and run Docker container
         uses: appleboy/ssh-action@v0.1.0
